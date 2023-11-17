@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     Results = {"CNN Epoch": [], "Train Loss": [], "Test Loss": [], "Accuracy": []}
 
-    model = CNN()
+    model = CNN(batchsize=batch_size)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
