@@ -7,45 +7,21 @@ import torchvision.datasets as datasets
 import torch.nn.functional as F
 import numpy as np
 import torch.utils.data as td
+import scipy.io as sio
 import random,time
+from mlp import cifar_loaders
 
 
-def cifar_loaders(batch_size, shuffle_test=False): 
-  normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                   std=[0.225, 0.225, 0.225])
-  train = datasets.CIFAR10('./', train=True, download=True, 
-    transform=transforms.Compose([
-      transforms.RandomHorizontalFlip(),
-      transforms.RandomCrop(32, 4),
-      transforms.ToTensor(),
-      normalize,
-    ]))
-  test = datasets.CIFAR10('./', train=False, 
-    transform=transforms.Compose([transforms.ToTensor(), normalize]))
-  train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size,
-    shuffle=True, pin_memory=True)
-  test_loader = torch.utils.data.DataLoader(test, batch_size=batch_size,
-    shuffle=shuffle_test, pin_memory=True)
-  return train_loader, test_loader
-
-batch_size = 64
-test_batch_size = 64
-
-train_loader, _ = cifar_loaders(batch_size)
-_, test_loader = cifar_loaders(test_batch_size)
-
-
-
-class CustomCNN(nn.Module):
+class CNN(nn.Module):
     def __init__(self):
-        super(CustomCNN, self).__init__()
+        super(CNN, self).__init__()
         
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
-        self.conv4 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.conv4 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         
-        self.fc1 = nn.Linear(512 * 4 * 4, 4096)
+        self.fc1 = nn.Linear(128 * 4 * 4, 4096)
         self.fc2 = nn.Linear(4096, 4096)
         self.fc3 = nn.Linear(4096, 10)  
 
@@ -55,10 +31,9 @@ class CustomCNN(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = F.relu(self.conv4(x))
-        
-        x = F.adaptive_avg_pool2d(x, (4, 4))
-        
-        x = x.view(-1, 512 * 4 * 4)
+
+        # x = F.adaptive_avg_pool2d(x, (4, 4))
+        x = x.view(-1, 128 * 4 * 4)
         
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -66,18 +41,16 @@ class CustomCNN(nn.Module):
 
         return x
 
-model = CustomCNN()
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-
-def train(epoch):
+def train(model, train_loader, criterion, optimizer, epoch, results):
     model.train()
+    epoch_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, target)
+        epoch_loss += loss.data.item()
         loss.backward()
         optimizer.step()
         if batch_idx % 100 == 0:
@@ -85,7 +58,12 @@ def train(epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data.item()))
 
-def test():
+    results["CNN Epoch"].append(epoch)
+    results["Train Loss"].append(epoch_loss)
+    return results
+
+
+def test(model, test_loader, criterion, results):
     model.eval()
     test_loss = 0
     correct = 0
@@ -98,11 +76,35 @@ def test():
             correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
     test_loss /= len(test_loader.dataset)
+    accuracy = 100. * correct / len(test_loader.dataset)
+
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+        accuracy))
 
-for epoch in range(1, 25):  
-    train(epoch)
-    test()
+    results["Test Loss"].append(test_loss)
+    results["Accuracy"].append(accuracy)
+    return results
+
+
+if __name__ == "__main__":
+    batch_size = 64
+    test_batch_size = 64
+
+    train_loader, _ = cifar_loaders(batch_size)
+    _, test_loader = cifar_loaders(test_batch_size)
+
+    Results = {"CNN Epoch": [], "Train Loss": [], "Test Loss": [], "Accuracy": []}
+
+    model = CNN()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+
+
+
+    for epoch in range(10):  
+        Results = train(model, train_loader, criterion, optimizer, epoch, Results)
+        Results = test(model, test_loader, criterion, Results)
+
+    sio.savemat('SNN_res.mat', Results)
 

@@ -7,6 +7,7 @@ import torchvision.datasets as datasets
 import torch.nn.functional as F
 import numpy as np
 import torch.utils.data as td
+import scipy.io as sio
 import random,time
 
 
@@ -28,22 +29,17 @@ def cifar_loaders(batch_size, shuffle_test=False):
         shuffle=shuffle_test, pin_memory=True)
     return train_loader, test_loader
 
-batch_size = 64
-test_batch_size = 64
 
-train_loader, _ = cifar_loaders(batch_size)
-_, test_loader = cifar_loaders(test_batch_size)
-
-class FullyConnectedNet(nn.Module):
+class MLPNet(nn.Module):
     def __init__(self):
-        super(FullyConnectedNet, self).__init__()
-        self.fc1 = nn.Linear(32 * 32 * 3, 512)
-        self.fc2 = nn.Linear(512, 512)
-        self.fc3 = nn.Linear(512, 256)
-        self.fc4 = nn.Linear(256, 256)
-        self.fc5 = nn.Linear(256, 128)
-        self.fc6 = nn.Linear(128, 128)
-        self.fc7 = nn.Linear(128, 10)  
+        super(MLPNet, self).__init__()
+        self.fc1 = nn.Linear(32 * 32 * 3, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 64)
+        self.fc5 = nn.Linear(64, 32)
+        self.fc6 = nn.Linear(32, 32)
+        self.fc7 = nn.Linear(32, 10)  
 
     def forward(self, x):
         x = x.view(-1, 32 * 32 * 3)  
@@ -56,37 +52,57 @@ class FullyConnectedNet(nn.Module):
         x = self.fc7(x)  
         return x
 
+if __name__ == "__main__":
+    batch_size = 64
+    test_batch_size = 64
 
-model = FullyConnectedNet()
+    train_loader, _ = cifar_loaders(batch_size)
+    _, test_loader = cifar_loaders(test_batch_size)
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    Results = {"CNN Epoch": [], "Train Loss": [], "Test Loss": [], "Accuracy": []}
 
-num_epochs = 20  
-for epoch in range(num_epochs):
-    model.train()
-    running_loss = 0.0
-    for i, data in enumerate(train_loader, 0):
-        inputs, labels = data
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-    print(f'Epoch {epoch+1}, Loss: {running_loss / (i + 1)}')
+    model = MLPNet()
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+
+    num_epochs = 10  
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
+        for i, data in enumerate(train_loader, 0):
+            inputs, labels = data
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+        print(f'Epoch {epoch+1}, Loss: {running_loss / (i + 1)}')
+
+        Results["MLPnoact Epoch"].append(epoch)
+        Results["Train Loss"].append(running_loss)
 
 
-model.eval()
-correct = 0
-total = 0
-with torch.no_grad():
-    for data in test_loader:
-        images, labels = data
-        outputs = model(images)
-        _, predicted = torch.max(outputs, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in test_loader:
+            images, labels = data
 
-accuracy = 100 * correct / total
-print(f'Accuracy on the test set: {accuracy:.2f}%')
+            outputs = model(images)
+
+            loss += criterion(outputs, labels)
+            
+            _, predicted = torch.max(outputs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy = 100 * correct / total
+    print(f'Accuracy on the test set: {accuracy:.2f}%')
+
+    Results["Accuracy"].append(accuracy)
+    Results["Test Loss"].append(loss)
+
+    sio.savemat('MLP_res.mat', Results)
