@@ -49,7 +49,7 @@ def train(model, train_loader, criterion, optimizer, epoch, results):
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
-        target = torch.from_numpy((to_onehot(target))
+        target = torch.from_numpy(to_onehot(target))
         loss = criterion(output, target)
         epoch_loss += loss.data.item()
         loss.backward()
