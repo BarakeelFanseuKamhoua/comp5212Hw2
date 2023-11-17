@@ -94,7 +94,7 @@ if __name__ == "__main__":
             images, labels = data
 
             outputs = model(images)
-            target = to_onehot(target)
+            labels = to_onehot(labels)
             loss += criterion(outputs, labels)
             
             _, predicted = torch.max(outputs, 1)
