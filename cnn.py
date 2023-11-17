@@ -49,7 +49,7 @@ def train(model, train_loader, criterion, optimizer, epoch, results):
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
-        target = torch.from_numpy(to_onehot(target))
+        target = to_onehot(target)
         loss = criterion(output, target)
         epoch_loss += loss.data.item()
         loss.backward()
@@ -93,7 +93,7 @@ def to_onehot(prelabel):
 
     label = np.zeros([prelabel.shape[0], k])
     label[range(prelabel.shape[0]), prelabel] = 1
-    return label
+    return torch.from_numpy(label)
 
 
 if __name__ == "__main__":
