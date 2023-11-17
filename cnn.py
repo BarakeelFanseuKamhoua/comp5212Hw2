@@ -88,8 +88,7 @@ def test(model, test_loader, criterion, results):
     return results
 
 
-def to_onehot(prelabel):
-    k = len(np.unique(prelabel))
+def to_onehot(prelabel, k=10):
 
     label = np.zeros([prelabel.shape[0], k])
     label[range(prelabel.shape[0]), prelabel] = 1
