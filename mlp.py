@@ -65,7 +65,7 @@ if __name__ == "__main__":
     train_loader, _ = cifar_loaders(batch_size)
     _, test_loader = cifar_loaders(test_batch_size)
 
-    Results = {"CNN Epoch": [], "Train Loss": [], "Test Loss": [], "Accuracy": []}
+    Results = {"MLP Epoch": [], "Train Loss": [], "Test Loss": [], "Accuracy": []}
 
     model = MLPNet()
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             running_loss += loss.item()
         print(f'Epoch {epoch+1}, Loss: {running_loss / (i + 1)}')
 
-        Results["MLPnoact Epoch"].append(epoch)
+        Results["MLP Epoch"].append(epoch)
         Results["Train Loss"].append(running_loss)
 
 
