@@ -10,6 +10,7 @@ import torch.utils.data as td
 import scipy.io as sio
 import random,time
 from mlp import cifar_loaders
+from mlp import to_onehot
 
 
 class CNN(nn.Module):
@@ -23,7 +24,7 @@ class CNN(nn.Module):
         
         self.fc1 = nn.Linear(128 * 4 * 4, 4096)
         self.fc2 = nn.Linear(4096, 64)
-        self.fc3 = nn.Linear(64, 10)  
+        self.fc3 = nn.Linear(batchsize, 10)  
 
     def forward(self, x):
         
@@ -72,6 +73,7 @@ def test(model, test_loader, criterion, results):
         for data, target in test_loader:
             data, target = Variable(data), Variable(target)
             output = model(data)
+            target = to_onehot(target)
             test_loss += criterion(output, target).data.item()
             pred = output.data.max(1, keepdim=True)[1]
             correct += pred.eq(target.data.view_as(pred)).cpu().sum()
@@ -88,13 +90,6 @@ def test(model, test_loader, criterion, results):
     return results
 
 
-def to_onehot(prelabel, k=10):
-
-    label = np.zeros([prelabel.shape[0], k])
-    label[range(prelabel.shape[0]), prelabel] = 1
-    return torch.from_numpy(label)
-
-
 if __name__ == "__main__":
     batch_size = 64
     test_batch_size = 64
@@ -107,8 +102,6 @@ if __name__ == "__main__":
     model = CNN(batchsize=batch_size)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-
-
 
     for epoch in range(10):  
         Results = train(model, train_loader, criterion, optimizer, epoch, Results)

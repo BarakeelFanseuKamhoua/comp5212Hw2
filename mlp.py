@@ -9,8 +9,6 @@ import numpy as np
 import torch.utils.data as td
 import scipy.io as sio
 import random,time
-from cnn import to_onehot
-
 
 def cifar_loaders(batch_size, shuffle_test=False): 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -52,6 +50,13 @@ class MLPNet(nn.Module):
         x = F.relu(self.fc6(x))
         x = self.fc7(x)  
         return x
+
+
+def to_onehot(prelabel, k=10):
+
+    label = np.zeros([prelabel.shape[0], k])
+    label[range(prelabel.shape[0]), prelabel] = 1
+    return torch.from_numpy(label)
 
 if __name__ == "__main__":
     batch_size = 64
