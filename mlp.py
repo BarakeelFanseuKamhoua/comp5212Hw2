@@ -9,6 +9,7 @@ import numpy as np
 import torch.utils.data as td
 import scipy.io as sio
 import random,time
+from cnn import to_onehot
 
 
 def cifar_loaders(batch_size, shuffle_test=False): 
@@ -33,13 +34,13 @@ def cifar_loaders(batch_size, shuffle_test=False):
 class MLPNet(nn.Module):
     def __init__(self):
         super(MLPNet, self).__init__()
-        self.fc1 = nn.Linear(32 * 32 * 3, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, 64)
-        self.fc4 = nn.Linear(64, 64)
-        self.fc5 = nn.Linear(64, 32)
-        self.fc6 = nn.Linear(32, 32)
-        self.fc7 = nn.Linear(32, 10)  
+        self.fc1 = nn.Linear(32 * 32 * 3, 256)
+        self.fc2 = nn.Linear(256, 256)
+        self.fc3 = nn.Linear(256, 256)
+        self.fc4 = nn.Linear(256, 128)
+        self.fc5 = nn.Linear(128, 128)
+        self.fc6 = nn.Linear(128, 64)
+        self.fc7 = nn.Linear(64, 10)  
 
     def forward(self, x):
         x = x.view(-1, 32 * 32 * 3)  
@@ -72,6 +73,7 @@ if __name__ == "__main__":
         running_loss = 0.0
         for i, data in enumerate(train_loader, 0):
             inputs, labels = data
+            labels = to_onehot(labels)
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -92,7 +94,7 @@ if __name__ == "__main__":
             images, labels = data
 
             outputs = model(images)
-
+            target = to_onehot(target)
             loss += criterion(outputs, labels)
             
             _, predicted = torch.max(outputs, 1)
