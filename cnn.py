@@ -13,17 +13,17 @@ from mlp import cifar_loaders
 
 
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self, batchsize):
         super(CNN, self).__init__()
-        
+        self.batchsize = batchsize
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.conv4 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         
         self.fc1 = nn.Linear(128 * 4 * 4, 4096)
-        self.fc2 = nn.Linear(4096, 4096)
-        self.fc3 = nn.Linear(4096, 10)  
+        self.fc2 = nn.Linear(4096, 64)
+        self.fc3 = nn.Linear(64, 10)  
 
     def forward(self, x):
         
@@ -32,7 +32,7 @@ class CNN(nn.Module):
         x = F.relu(self.conv3(x))
         x = F.relu(self.conv4(x))
 
-        # x = F.adaptive_avg_pool2d(x, (4, 4))
+        x = F.adaptive_avg_pool2d(x, (4, 4))
         x = x.view(-1, 128 * 4 * 4)
         
         x = F.relu(self.fc1(x))
@@ -49,6 +49,7 @@ def train(model, train_loader, criterion, optimizer, epoch, results):
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = model(data)
+        target = to_onehot(target)
         loss = criterion(output, target)
         epoch_loss += loss.data.item()
         loss.backward()
@@ -85,6 +86,14 @@ def test(model, test_loader, criterion, results):
     results["Test Loss"].append(test_loss)
     results["Accuracy"].append(accuracy)
     return results
+
+
+def to_onehot(prelabel):
+    k = len(np.unique(prelabel))
+
+    label = np.zeros([prelabel.shape[0], k])
+    label[range(prelabel.shape[0]), prelabel] = 1
+    return label
 
 
 if __name__ == "__main__":
